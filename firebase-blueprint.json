@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "plan": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["displayName", "email", "plan", "createdAt"]
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "Folder for organizing files",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "createdAt"]
+    },
+    "File": {
+      "title": "File",
+      "description": "File metadata",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "folderId": { "type": "string" },
+        "size": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "size", "createdAt"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "User note",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "createdAt"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "Team member information",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/users/{uid}/folders/{folderId}": {
+      "schema": "Folder",
+      "description": "User folders"
+    },
+    "/users/{uid}/files/{fileId}": {
+      "schema": "File",
+      "description": "User files"
+    },
+    "/users/{uid}/notes/{noteId}": {
+      "schema": "Note",
+      "description": "User notes"
+    },
+    "/users/{uid}/teamMembers/{memberId}": {
+      "schema": "TeamMember",
+      "description": "User team members"
+    }
+  }
+}

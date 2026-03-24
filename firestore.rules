@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{uid}
+    // Fields:
+    //   - displayName: string (required)
+    //   - email: string (required)
+    //   - plan: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: /users/{uid}/folders/{folderId}
+    // Fields:
+    //   - name: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: /users/{uid}/files/{fileId}
+    // Fields:
+    //   - name: string (required)
+    //   - folderId: string (optional)
+    //   - size: number (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: /users/{uid}/notes/{noteId}
+    // Fields:
+    //   - title: string (required)
+    //   - content: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: /users/{uid}/teamMembers/{memberId}
+    // Fields:
+    //   - name: string (required)
+    //   - role: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isValidUser(data) {
+      return data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             data.email is string && data.email.size() > 0 &&
+             data.plan is string &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidFolder(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidFile(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 255 &&
+             (data.folderId == null || data.folderId is string) &&
+             data.size is number && data.size >= 0 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidNote(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 255 &&
+             (data.content == null || data.content is string) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidTeamMember(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (data.role == null || data.role is string) &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && isValidUser(request.resource.data);
+      allow update: if isOwner(uid) && isValidUser(request.resource.data);
+      allow delete: if isOwner(uid);
+      
+      match /folders/{folderId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidFolder(request.resource.data);
+        allow update: if isOwner(uid) && isValidFolder(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+      
+      match /files/{fileId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidFile(request.resource.data);
+        allow update: if isOwner(uid) && isValidFile(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+      
+      match /notes/{noteId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidNote(request.resource.data);
+        allow update: if isOwner(uid) && isValidNote(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+      
+      match /teamMembers/{memberId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && isValidTeamMember(request.resource.data);
+        allow update: if isOwner(uid) && isValidTeamMember(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+    }
+  }
+}
