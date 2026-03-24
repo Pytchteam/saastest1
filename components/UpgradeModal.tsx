@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { X, Sparkles, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Sparkles, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -8,7 +8,39 @@ interface UpgradeModalProps {
 }
 
 const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
+  const [loading, setLoading] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: "price_1ProPlanID", // Replace with your real Stripe Price ID
+          successUrl: `${window.location.origin}/#dashboard?session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${window.location.origin}/#dashboard`,
+        }),
+      });
+
+      const session = await response.json();
+      
+      if (session.url) {
+        window.location.href = session.url;
+      } else {
+        throw new Error(session.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please ensure STRIPE_SECRET_KEY is set in the environment.');
+    } finally {
+      setLoading(null);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -62,10 +94,11 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose }) => {
                Close
              </button>
              <button 
-               onClick={onClose}
-               className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-200"
+               onClick={handleUpgrade}
+               disabled={loading}
+               className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 disabled:opacity-50"
              >
-               Learn More
+               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upgrade Now'}
              </button>
            </div>
         </div>

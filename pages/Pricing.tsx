@@ -1,6 +1,7 @@
 
-import React from 'react';
-import { ArrowLeft, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
 
 interface PageProps {
   onNavigate: (path: string) => void;
@@ -8,6 +9,8 @@ interface PageProps {
 }
 
 const Pricing: React.FC<PageProps> = ({ onNavigate, onOpenAuth }) => {
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
   const plans = [
     {
       name: "Starter",
@@ -15,7 +18,8 @@ const Pricing: React.FC<PageProps> = ({ onNavigate, onOpenAuth }) => {
       description: "For individuals just getting started.",
       features: ["5 GB Encrypted Storage", "1 User", "Basic File Sharing", "Community Support"],
       cta: "Get Started Free",
-      highlight: false
+      highlight: false,
+      priceId: null
     },
     {
       name: "Pro",
@@ -24,7 +28,8 @@ const Pricing: React.FC<PageProps> = ({ onNavigate, onOpenAuth }) => {
       description: "For professional teams needing power.",
       features: ["1 TB Encrypted Storage", "5 Users Included", "Advanced Permissions", "Priority Email Support", "Version History (30 Days)"],
       cta: "Upgrade to Pro",
-      highlight: true
+      highlight: true,
+      priceId: "price_1ProPlanID" // Replace with your real Stripe Price ID
     },
     {
       name: "Business",
@@ -33,7 +38,8 @@ const Pricing: React.FC<PageProps> = ({ onNavigate, onOpenAuth }) => {
       description: "For growing organizations.",
       features: ["5 TB Encrypted Storage", "Unlimited Users", "SSO & Audit Logs", "24/7 Priority Support", "Unlimited Version History"],
       cta: "Contact Sales",
-      highlight: false
+      highlight: false,
+      priceId: "price_1BusinessPlanID" // Replace with your real Stripe Price ID
     },
     {
         name: "Enterprise",
@@ -41,9 +47,45 @@ const Pricing: React.FC<PageProps> = ({ onNavigate, onOpenAuth }) => {
         description: "For large scale security needs.",
         features: ["Unlimited Storage", "Dedicated Instance", "Custom SLA", "On-premise Deployment", "Dedicated Account Manager"],
         cta: "Contact Sales",
-        highlight: false
+        highlight: false,
+        priceId: null
     }
   ];
+
+  const handleCheckout = async (plan: typeof plans[0]) => {
+    if (!plan.priceId) {
+      onOpenAuth();
+      return;
+    }
+
+    setLoadingPlan(plan.name);
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: plan.priceId,
+          successUrl: `${window.location.origin}/#dashboard?session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${window.location.origin}/#pricing`,
+        }),
+      });
+
+      const session = await response.json();
+      
+      if (session.url) {
+        window.location.href = session.url;
+      } else {
+        throw new Error(session.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout. Please ensure STRIPE_SECRET_KEY is set in the environment.');
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
 
   return (
     <section className="pt-32 pb-20 px-6 max-w-7xl mx-auto min-h-screen animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -90,14 +132,17 @@ const Pricing: React.FC<PageProps> = ({ onNavigate, onOpenAuth }) => {
             </div>
 
             <button 
-              onClick={onOpenAuth}
-              className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all ${
+              onClick={() => handleCheckout(plan)}
+              disabled={loadingPlan !== null}
+              className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
                 plan.highlight 
                   ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-200' 
                   : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
-              }`}
+              } disabled:opacity-50`}
             >
-              {plan.cta}
+              {loadingPlan === plan.name ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : plan.cta}
             </button>
           </div>
         ))}
